@@ -1,2 +1,16 @@
 
 *.user
+
+*.o
+
+Makefile
+
+*.stash
+
+*.lproj
+
+midi-editor.app/Contents/PkgInfo
+
+midi-editor.app/Contents/MacOS/midi-editor
+
+*.plist
