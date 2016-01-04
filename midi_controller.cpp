@@ -11,12 +11,6 @@ midi_controller::midi_controller(int numBanks, int numSwitches) {
     this->set_number_of_banks(numBanks);
     this->set_number_of_switches(numSwitches);
 
-    //Get EEPROM address
-    /*int counter = 10;
-    for (int j = 0; j < numSwitches; j++) {
-        this->EEPROM_address.append(counter);
-        counter += midi_structure::STRUCT_SIZE;
-    }*/
 }
 
 void midi_controller::set_number_of_banks(int numBanks){

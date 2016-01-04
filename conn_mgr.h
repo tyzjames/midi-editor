@@ -4,6 +4,7 @@
 #include <QString>
 #include <QSerialPort>
 #include <QSerialPortInfo>
+#include <debug_log.h>
 
 class conn_mgr
 {
@@ -28,6 +29,7 @@ private:
     bool deviced_connected;
     QString device_port_name;
     QSerialPort *device;
+    debug_log *dLog;
 
     const QList<int> vendor_id = QList<int>() << 1027 << 6790 << 9025;
     const QList<int> product_id = QList<int>() << 24577 << 29987 << 67;

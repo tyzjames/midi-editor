@@ -4,7 +4,10 @@
 #include <QMainWindow>
 #include <midi_controller.h>
 #include <conn_mgr.h>
+#include <QString>
 #include <QLabel>
+#include <debug_log.h>
+
 //#include <QtSql>
 
 namespace Ui {
@@ -18,6 +21,8 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
+
+    void write_to_console(QString text);
 
 private slots:
     void on_actionConnect_triggered();
@@ -41,13 +46,15 @@ private slots:
 
     void on_comboBox_type_5_currentIndexChanged(int index);
 
-private:
-    Ui::MainWindow *ui;
+    void on_actionExpression_Input_triggered();
 
+private:
     QLabel *statLabel;
 
+    Ui::MainWindow *ui;
     conn_mgr *cm;
     midi_controller *mc;
+    debug_log *dLog;
 
     bool read_data_from_device();
     bool _load_complete;

@@ -14,3 +14,5 @@ midi-editor.app/Contents/PkgInfo
 midi-editor.app/Contents/MacOS/midi-editor
 
 *.plist
+
+midi-editor.app/Contents/MacOS/logfile/data_log.txt

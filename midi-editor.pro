@@ -18,12 +18,17 @@ SOURCES += main.cpp\
     midi_base.cpp \
     midi_structure.cpp \
     midi_controller.cpp \
-    conn_mgr.cpp
+    conn_mgr.cpp \
+    debug_log.cpp \
+    expdialogwidget.cpp
 
 HEADERS  += mainwindow.h \
     midi_base.h \
     midi_structure.h \
     midi_controller.h \
-    conn_mgr.h
+    conn_mgr.h \
+    debug_log.h \
+    expdialogwidget.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    Expression.ui

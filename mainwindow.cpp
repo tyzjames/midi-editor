@@ -1,10 +1,12 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "ui_Expression.h"
 
 #include <QtCore>
 #include <midi_controller.h>
 #include <QDebug>
 #include <QMessageBox>
+#include <QDateTime>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -12,13 +14,17 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    // Create debug log file
+    //-----------------------
+    this->dLog = new debug_log(true);
+
     // Status label
     //----------------------
     this->statLabel = new QLabel(this);
     ui->statusBar->addPermanentWidget(statLabel,1);
 
     this->mc = new midi_controller();
-    this->cm = new conn_mgr();
+    this->cm = new conn_mgr();    
 
     this->_load_complete = false;
     this->_info_received = false;
@@ -37,7 +43,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-
     this->cm->close();
     delete ui;
 }
@@ -65,6 +70,9 @@ void MainWindow::enable_form(bool inStatus) {
 }
 
 void MainWindow::load_form_details() {
+
+    this->write_to_console("Loading form details...");
+
     int switch_number = ui->comboBox_switch->currentIndex();
     int bank_number = ui->comboBox_bank->currentIndex();
 
@@ -109,12 +117,16 @@ void MainWindow::on_actionConnect_triggered()
 
     // If test mode is checked
     //-------------------------------------------------
+    /*
     if (this->ui->actionTest_Mode->isChecked()){
         this->cm->debug = true;
     } else {
         this->cm->debug = false;
     }
+    */
 
+    this->write_to_console("Connecting to device...");
+    this->dLog->writeLog("Connecting to device");
 
     // If devices is not connected
     //------------------------------------------------
@@ -124,10 +136,13 @@ void MainWindow::on_actionConnect_triggered()
         // Check if device is connect in USB port. Connect if so.
         //---------------------------------------------------------
         if (cm->check_if_device_available()) {
+            this->write_to_console("Device found. Connecting...");
             qDebug() << "(on_actionConnect_triggered) Device is available. Connecting now.";
+
             //cm->connect(QSerialPort::Baud115200); //Doesnt work with Nano, only with Uno. Don't use this.
             cm->connect(QSerialPort::Baud9600); //Works with Nano
         } else {
+            this->write_to_console(("Device not found."));
             QMessageBox::warning(this, "Connection error", "Device not found! Please ensure that the controller is connected to your PC/Mac via USB.");
             this->statLabel->setText("Status: Device not found");
         }
@@ -141,9 +156,11 @@ void MainWindow::on_actionConnect_triggered()
             //---------------------------------------------------
             if (received_data.isEmpty() || received_data.isNull()) {
                 this->cm->close();
-                QMessageBox::warning(this, "Device error", "No data received! Please ensure your device is booted in USB mode. Hold down Switch A before connecting.");
+                this->write_to_console("No data received.");
+                QMessageBox::warning(this, "Device error", "No data received! Please ensure your device is booted in USB mode. Hold down Switch A before clicking connect.");
             } else {
 
+                this->write_to_console("Data received.");
                 qDebug() << "(on_actionConnect_triggered) received data: " << received_data;
 
                 // Process the received system info data. If successful, return true
@@ -451,6 +468,14 @@ void MainWindow::on_comboBox_type_5_currentIndexChanged(int index)
         this->ui->spinBox_channel_5->setEnabled(true);
     }
 }
+
+void MainWindow::write_to_console(QString text) {
+    this->ui->textBrowser_output->insertPlainText(QDateTime::currentDateTime().toString());
+    this->ui->textBrowser_output->insertPlainText(" : ");
+    this->ui->textBrowser_output->insertPlainText(text);
+    this->ui->textBrowser_output->insertPlainText("\n");
+}
+
 /*
 void MainWindow::on_actionCheck_for_updates_triggered()
 {
@@ -470,3 +495,8 @@ void MainWindow::on_actionCheck_for_updates_triggered()
        qDebug("Connected");
    }
 }*/
+
+void MainWindow::on_actionExpression_Input_triggered()
+{
+
+}
