@@ -16,11 +16,15 @@ public:
     QString get_patch_name_short_4();
     QByteArray get_serial_string();
 
+    int get_checkSum_val();
+    int get_patch_name_size();
+
     void set_patch_name_short(QString inPatchName);
 
     int STRUCT_SIZE;
     const QStringList MIDI_type_toggle = (QStringList() << "Empty" << "Program Change" << "Control Change"
-                                        << "Strymon Bank Up" << "Strymon Bank Down" << "CC Toggle" << "CC Toggle Hold");
+                                        << "Strymon Bank Up" << "Strymon Bank Down" << "CC Toggle Value" << "CC Toggle Hold"
+                                          << "CC Toggle Number");
 
     midi_base *_mb1;
     midi_base *_mb2;
@@ -33,6 +37,8 @@ private:
     int _EEPROM_address;
     QString _patch_name_short;
     int _patch_name_size;
+
+    int _patch_name_checkSum;
 
 
 

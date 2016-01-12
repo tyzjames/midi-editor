@@ -27,6 +27,12 @@ midi_base::midi_base(int type, int num, int val, int valMax, int channel) {
     this->_val = val;
 }
 
+int midi_base::get_checkSum_val() {
+    int checkSum_Val = this->_type + this->_num + this->_val + this->_val_max + this->_channel;
+
+    return checkSum_Val;
+}
+
 QByteArray midi_base::get_serial_string() {
     QByteArray str = "";
 

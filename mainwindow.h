@@ -36,6 +36,8 @@ private slots:
 
     void on_actionClose_triggered();
 
+    void on_actionExpression_Input_triggered();
+
     void on_comboBox_type_currentIndexChanged(int index);
 
     void on_comboBox_type_2_currentIndexChanged(int index);
@@ -45,8 +47,6 @@ private slots:
     void on_comboBox_type_4_currentIndexChanged(int index);
 
     void on_comboBox_type_5_currentIndexChanged(int index);
-
-    void on_actionExpression_Input_triggered();
 
 private:
     QLabel *statLabel;
@@ -65,9 +65,9 @@ private:
     bool _bank_changed;
 
     const QStringList MIDI_type = (QStringList() << "Empty" << "Program Change" << "Control Change"
-                                   << "Strymon Bank Up" << "Strymon Bank Down");
-    const QStringList MIDI_type_toggle = (QStringList() << "Empty" << "Program Change" << "Control Change"
-                                        << "Strymon Bank Up" << "Strymon Bank Down" << "CC Toggle" << "CC Toggle Hold");
+                                   << "CC Toggle Value" << "CC Toggle Hold" << "CC Toggle Number"
+                                   << "sendNoteOn" << "sendNoteOff" << "Midi Clock"
+                                   << "Strymon Bank Up" << "Strymon Bank Down" << "Strymon Scroll Up" << "Strymon Scroll Down");
 
 };
 

@@ -14,6 +14,7 @@ public:
     int get_val();
     int get_val_max();
     int get_channel();
+    int get_checkSum_val();
     QByteArray get_serial_string();
 
     void set_type(int inType);

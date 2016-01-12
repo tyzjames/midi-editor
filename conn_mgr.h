@@ -12,7 +12,7 @@ class conn_mgr
 public:
     conn_mgr();
 
-    bool debug;
+    bool debug = false;
 
     void get_usb_info_all();
     bool check_if_device_available();
@@ -31,10 +31,10 @@ private:
     QSerialPort *device;
     debug_log *dLog;
 
-    const QList<int> vendor_id = QList<int>() << 1027 << 6790 << 9025;
-    const QList<int> product_id = QList<int>() << 24577 << 29987 << 67;
-    const QList<QString> board_name = QList<QString>() << "Funduino nano" << "Funduino uno" << "Arduino Uno";
-    const QList<QString> device_name = QList<QString>() << "MorningstarFX MC6" << "Error" << "Error";
+    const QList<int> vendor_id = QList<int>() << 1027 << 6790 << 9025 << 5824;
+    const QList<int> product_id = QList<int>() << 24577 << 29987 << 67 << 1155;
+    const QList<QString> board_name = QList<QString>() << "Funduino nano" << "Funduino uno" << "Arduino Uno" << "Teensy";
+    const QList<QString> device_name = QList<QString>() << "MorningstarFX MC6" << "Error" << "Error" << "MC6+";
 
 };
 

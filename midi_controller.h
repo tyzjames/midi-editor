@@ -26,7 +26,7 @@ public:
     int get_patch_name_size();
 
     const QStringList switch_name = (QStringList() << "A" << "B" << "C" << "D" << "E" << "F");
-    const QStringList bank_name = (QStringList() << "1" << "2" << "3" << "4" << "5");
+    const QStringList bank_name = (QStringList() << "1" << "2" << "3" << "4" << "5" << "6" << "7" << "8" << "9" << "10");
 
 private:
 

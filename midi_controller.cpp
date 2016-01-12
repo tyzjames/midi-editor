@@ -45,28 +45,60 @@ QStringList midi_controller::get_switch_str_list(){
 //-----------------------------------------------
 bool midi_controller::process_ms_data(QString data_in){
 
+    QString ms_data;
+
     // Check the last character. If it ends eith E means full string received
     //------------------------------------------------------------------------------------
-    if (!data_in.endsWith("E")) {
-        qDebug() << "Data error in process_ms_data. End byte not received. Last byte received: " << data_in.right(1);
+    int sendByte = data_in.indexOf('S');
+    int endByte = data_in.indexOf('E', sendByte + 1);
+    int checkSumStart = data_in.indexOf('C', endByte + 1);
+    int checkSumEnd = data_in.indexOf('V', checkSumStart + 1);
+
+    if (endByte < 0) {
+        qDebug() << "(process_ms_data) Data error. End byte not received. Last byte received: " << data_in.right(1);
         return false;
-    } else {
+    } else if (sendByte >= 0 && endByte > 0){
         qDebug() << "Received data is correct. End byte received.";
-        // Remove first and last character
-        //-----------------------------------
-        data_in.remove(data_in.length()-1,1);
+        ms_data = data_in.mid(sendByte + 1, endByte - sendByte - 1); // Remove first and last character
+
     }
 
-    qDebug() << "MS data: " << data_in;
-
     QRegExp rx("[,]");
-    QStringList list = data_in.split(rx, QString::SkipEmptyParts);
-
+    QStringList list = ms_data.split(rx, QString::SkipEmptyParts);
     qDebug() << "MS List: " << list;
+
+
+    // CheckSum
+    //--------------------
+    int checkSumValExpected = 0;
+    int checkSumVal = 0;
+
+    if (checkSumStart < 0 && checkSumEnd < 0) {
+        qDebug() << "CheckSum value not received";
+    } else {
+        checkSumVal = (data_in.mid(checkSumStart + 1, checkSumEnd - checkSumStart - 1).toInt())%128;
+
+        for (int i = 1; i < list.size(); i++) { //Ignore first in list as that is the address position number
+            checkSumValExpected += list.at(i).toInt();
+        }
+
+        checkSumValExpected = checkSumValExpected%128;
+
+        if (checkSumVal != checkSumValExpected) {
+            qDebug() << "CheckSum value wrong! Expected: " << checkSumValExpected << " | Received: " << checkSumVal;
+            return false;
+        } else {
+            qDebug() << "CheckSum value correct! Expected: " << checkSumValExpected << " | Received: " << checkSumVal;
+        }
+    }
 
     // Store incoming string in midi_structure format
     //----------------------------------------------------------------------
-    this->ms = new midi_structure(list.at(0).toInt(), list.mid(1, list.size()), this->_patch_name_size);
+    if (list.at(0) < 0) {
+        return false;
+    } else {
+        this->ms = new midi_structure(list.at(0).toInt(), list.mid(1, list.size()), this->_patch_name_size);
+    }
 
     return true;
 }
@@ -77,23 +109,54 @@ bool midi_controller::process_info_data(QString data_in){
 
     // Check the last character. If it ends eith E means full string received
     //------------------------------------------------------------------------------------
-    if (!data_in.endsWith("E")) {
+    int sendByte = data_in.indexOf('S');
+    int endByte = data_in.indexOf('E', sendByte + 1);
+    int checkSumStart = data_in.indexOf('C', endByte + 1);
+    int checkSumEnd = data_in.indexOf('V', checkSumStart + 1);
+
+    QString system_info_data = "";
+    QString checkSum_data;
+
+    if (endByte < 0) {
         qDebug() << "Data error in process_bank_Data. End byte not received for system data. Last byte received: " << data_in.right(1);
         return false;
-    } else {
+    } else if (sendByte >= 0 && endByte > 0){
         qDebug() << "System info data is correct. End byte received.";
         // Remove first and last character
         //-----------------------------------
-        data_in.remove(data_in.length()-1,1);
+        system_info_data = data_in.mid(sendByte + 1, endByte - sendByte - 1); // Remove first and last character
     }
 
-    qDebug() << "System info data: " << data_in;
+    qDebug() << "System info data: " << system_info_data;
 
     // Split the string into list
     //-----------------------------------------
     QRegExp rx("[,]");
-    QStringList list = data_in.split(rx, QString::SkipEmptyParts);
-    int list_size = list.size();
+    QStringList list = system_info_data.split(rx, QString::SkipEmptyParts);
+
+    // CheckSum
+    //--------------------
+    int checkSumValExpected = 0;
+    int checkSumVal = 0;
+
+    if (checkSumStart < 0 && checkSumEnd < 0) {
+        qDebug() << "CheckSum value not received";
+    } else {
+        checkSumVal = (data_in.mid(checkSumStart + 1, checkSumEnd - checkSumStart - 1).toInt())%128;
+        qDebug() << "checkSumVal: " << data_in.mid(checkSumStart + 1, checkSumEnd - checkSumStart - 1);
+        for (int i = 0; i < list.size(); i++) {
+            checkSumValExpected += list.at(i).toInt();
+        }
+
+        checkSumValExpected = checkSumValExpected%128;
+
+        if (checkSumVal != checkSumValExpected) {
+            qDebug() << "CheckSum value wrong! Expected: " << checkSumValExpected << " | Received: " << checkSumVal;
+            return false;
+        } else {
+            qDebug() << "CheckSum value correct! Expected: " << checkSumValExpected << " | Received: " << checkSumVal;
+        }
+    }
 
     qDebug() << "System info list: " << list;
 

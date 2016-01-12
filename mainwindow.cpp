@@ -31,7 +31,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // First Switch, Add toggle function
     //-------------------------------------------
-    this->ui->comboBox_type->addItems(this->MIDI_type_toggle);
+    this->ui->comboBox_type->addItems(this->MIDI_type);
     this->ui->comboBox_type_2->addItems(this->MIDI_type);
     this->ui->comboBox_type_3->addItems(this->MIDI_type);
     this->ui->comboBox_type_4->addItems(this->MIDI_type);
@@ -71,8 +71,6 @@ void MainWindow::enable_form(bool inStatus) {
 
 void MainWindow::load_form_details() {
 
-    this->write_to_console("Loading form details...");
-
     int switch_number = ui->comboBox_switch->currentIndex();
     int bank_number = ui->comboBox_bank->currentIndex();
 
@@ -92,14 +90,17 @@ void MainWindow::load_form_details() {
         this->ui->spinBox_num_4->setValue(temp_ms->_mb4->get_num());
         this->ui->spinBox_num_5->setValue(temp_ms->_mb5->get_num());
 
-        this->ui->spinBox_val_max->setValue(temp_ms->_mb1->get_val_max());
-
         this->ui->spinBox_val->setValue(temp_ms->_mb1->get_val());
-        this->ui->spinBox_val_max->setValue(temp_ms->_mb1->get_val_max());
         this->ui->spinBox_val_2->setValue(temp_ms->_mb2->get_val());
         this->ui->spinBox_val_3->setValue(temp_ms->_mb3->get_val());
         this->ui->spinBox_val_4->setValue(temp_ms->_mb4->get_val());
         this->ui->spinBox_val_5->setValue(temp_ms->_mb5->get_val());
+
+        this->ui->spinBox_val_max->setValue(temp_ms->_mb1->get_val_max());
+        this->ui->spinBox_val_max_2->setValue(temp_ms->_mb2->get_val_max());
+        this->ui->spinBox_val_max_3->setValue(temp_ms->_mb3->get_val_max());
+        this->ui->spinBox_val_max_4->setValue(temp_ms->_mb4->get_val_max());
+        this->ui->spinBox_val_max_5->setValue(temp_ms->_mb5->get_val_max());
 
         this->ui->spinBox_channel->setValue(temp_ms->_mb1->get_channel());
         this->ui->spinBox_channel_2->setValue(temp_ms->_mb2->get_channel());
@@ -114,18 +115,6 @@ void MainWindow::load_form_details() {
 
 void MainWindow::on_actionConnect_triggered()
 {
-
-    // If test mode is checked
-    //-------------------------------------------------
-    /*
-    if (this->ui->actionTest_Mode->isChecked()){
-        this->cm->debug = true;
-    } else {
-        this->cm->debug = false;
-    }
-    */
-
-    this->write_to_console("Connecting to device...");
     this->dLog->writeLog("Connecting to device");
 
     // If devices is not connected
@@ -136,13 +125,11 @@ void MainWindow::on_actionConnect_triggered()
         // Check if device is connect in USB port. Connect if so.
         //---------------------------------------------------------
         if (cm->check_if_device_available()) {
-            this->write_to_console("Device found. Connecting...");
             qDebug() << "(on_actionConnect_triggered) Device is available. Connecting now.";
 
-            //cm->connect(QSerialPort::Baud115200); //Doesnt work with Nano, only with Uno. Don't use this.
             cm->connect(QSerialPort::Baud9600); //Works with Nano
+
         } else {
-            this->write_to_console(("Device not found."));
             QMessageBox::warning(this, "Connection error", "Device not found! Please ensure that the controller is connected to your PC/Mac via USB.");
             this->statLabel->setText("Status: Device not found");
         }
@@ -150,42 +137,40 @@ void MainWindow::on_actionConnect_triggered()
         // If device is connected
         //--------------------------------------------------------
         if (cm->is_connected()) {
+
+            this->cm->write(">S0EC0V");
             QByteArray received_data = cm->wait_for_system_serial(2000);
 
+            qDebug() << "Received data: " << received_data;
             // Check if device is sending data
             //---------------------------------------------------
             if (received_data.isEmpty() || received_data.isNull()) {
+                QMessageBox::warning(this, "Device error", "No data received! Please ensure your device is connected.");
                 this->cm->close();
-                this->write_to_console("No data received.");
-                QMessageBox::warning(this, "Device error", "No data received! Please ensure your device is booted in USB mode. Hold down Switch A before clicking connect.");
             } else {
-
-                this->write_to_console("Data received.");
                 qDebug() << "(on_actionConnect_triggered) received data: " << received_data;
 
                 // Process the received system info data. If successful, return true
                 //----------------------------------------------------------------
                 if (mc->process_info_data(received_data)) {
 
+                    qDebug() << "(on_actionClose_triggered) process_info_data correct";
+
                     // Adjust all the object specs
                     //------------------------------------------
+                    this->_info_received = false;
                     this->ui->lineEdit_shortName->setMaxLength(this->mc->get_patch_name_size());
                     this->ui->comboBox_bank->clear();
                     this->ui->comboBox_switch->clear();
                     this->ui->comboBox_bank->addItems(mc->get_bank_str_list());
                     this->ui->comboBox_switch->addItems(mc->get_switch_str_list());
-
-                    // If connected then set switch and bank combo box to 0
-                    //--------------------------------------------------------
                     this->ui->comboBox_bank->setCurrentIndex(0);
                     this->ui->comboBox_switch->setCurrentIndex(0);
+                    this->_info_received = true;
 
                     this->statLabel->setText("Status: <font color = 'green'>Connected</font>");
                     ui->actionConnect->setText("Disconnect");
-                    this->ui->actionTest_Mode->setEnabled(false);
                     this->enable_form(true);
-
-                    this->_info_received = true;
 
                     // Once system info received, get first MS data.
                     //---------------------------------------------------
@@ -194,7 +179,7 @@ void MainWindow::on_actionConnect_triggered()
 
                     qDebug() << "(on_actionConnect_triggered) Retrieving first MS data... Bank: " << bank_number << " Switch: " << switch_number;
 
-                    QByteArray ms_received_data = cm->wait_for_ms_serial(800, this->mc->get_memory_position(bank_number, switch_number));
+                    QByteArray ms_received_data = cm->wait_for_ms_serial(800, this->mc->get_memory_position(0, 0));
                     if (mc->process_ms_data(ms_received_data)) {
                         this->load_form_details();
                     } else {
@@ -210,19 +195,16 @@ void MainWindow::on_actionConnect_triggered()
                 } else {
                     QMessageBox::warning(this, "Data error", "System Info Data Error. Data not in sync!");
                     this->statLabel->setText("Status: No data received");
-                    this->cm->close();
                 }
             }
 
         }
     } else {
         qDebug() << "Disconnecting";
-
         ui->actionConnect->setText("Connect");
         this->enable_form(false);
         this->statLabel->setText("Status: <font color = 'red'>Not Connected</font>");
         this->ui->actionTest_Mode->setEnabled(true);
-
         this->cm->close();
     }
 }
@@ -239,6 +221,8 @@ void MainWindow::on_comboBox_bank_currentIndexChanged(int index)
         QByteArray ms_received_data = this->cm->wait_for_ms_serial(800, this->mc->get_memory_position(this->ui->comboBox_bank->currentIndex(), this->ui->comboBox_switch->currentIndex()));
         if (mc->process_ms_data(ms_received_data)) {
             this->load_form_details();
+        } else {
+            QMessageBox::warning(this, "Transmission error", "Wrong data received! CheckSum wrong.");
         }
         this->statLabel->setText("Status: <font color = 'black'>Connected</font>");
         this->_bank_changed = false;
@@ -253,6 +237,8 @@ void MainWindow::on_comboBox_switch_currentIndexChanged(int index)
         QByteArray ms_received_data = this->cm->wait_for_ms_serial(800, this->mc->get_memory_position(this->ui->comboBox_bank->currentIndex(), this->ui->comboBox_switch->currentIndex()));
         if (mc->process_ms_data(ms_received_data)) {
             this->load_form_details();
+        } else {
+            QMessageBox::warning(this, "Transmission error", "Wrong data received! CheckSum wrong.");
         }
         this->statLabel->setText("Status: <font color = 'black'>Connected</font>");
     }
@@ -266,15 +252,24 @@ void MainWindow::on_pushButton_save_released()
         midi_structure *temp_ms = mc->ms;
 
         temp_ms->_mb1->set_all(ui->comboBox_type->currentIndex(), ui->spinBox_num->value(), ui->spinBox_val->value(), ui->spinBox_val_max->value(), ui->spinBox_channel->value());
-        temp_ms->_mb2->set_all(ui->comboBox_type_2->currentIndex(), ui->spinBox_num_2->value(), ui->spinBox_val_2->value(), ui->spinBox_channel_2->value());
-        temp_ms->_mb3->set_all(ui->comboBox_type_3->currentIndex(), ui->spinBox_num_3->value(), ui->spinBox_val_3->value(), ui->spinBox_channel_3->value());
-        temp_ms->_mb4->set_all(ui->comboBox_type_4->currentIndex(), ui->spinBox_num_4->value(), ui->spinBox_val_4->value(), ui->spinBox_channel_4->value());
-        temp_ms->_mb5->set_all(ui->comboBox_type_5->currentIndex(), ui->spinBox_num_5->value(), ui->spinBox_val_5->value(), ui->spinBox_channel_5->value());
+        temp_ms->_mb2->set_all(ui->comboBox_type_2->currentIndex(), ui->spinBox_num_2->value(), ui->spinBox_val_2->value(), ui->spinBox_val_max_2->value(), ui->spinBox_channel_2->value());
+        temp_ms->_mb3->set_all(ui->comboBox_type_3->currentIndex(), ui->spinBox_num_3->value(), ui->spinBox_val_3->value(), ui->spinBox_val_max_3->value(), ui->spinBox_channel_3->value());
+        temp_ms->_mb4->set_all(ui->comboBox_type_4->currentIndex(), ui->spinBox_num_4->value(), ui->spinBox_val_4->value(), ui->spinBox_val_max_4->value(), ui->spinBox_channel_4->value());
+        temp_ms->_mb5->set_all(ui->comboBox_type_5->currentIndex(), ui->spinBox_num_5->value(), ui->spinBox_val_5->value(), ui->spinBox_val_max_5->value(), ui->spinBox_channel_5->value());
 
         temp_ms->set_patch_name_short(this->ui->lineEdit_shortName->text());
 
         // Send the serial data to the midi pedal here
         QByteArray data_to_send = "^S" + temp_ms->get_serial_string() + "E";
+
+        int checkSum_val = temp_ms->get_checkSum_val();
+
+        for (int i = 0; i < temp_ms->get_patch_name_size(); i++) {
+            checkSum_val += temp_ms->get_patch_name_short_4().at(i).toLatin1();
+        }
+
+        data_to_send += "C" + QByteArray::number(checkSum_val%128) + "V";
+
 
         qDebug() << "Sending Data :" << data_to_send;
 
@@ -288,11 +283,8 @@ void MainWindow::on_pushButton_save_released()
         }
     } else {
         qDebug() << "Disconnecting";
-
         ui->actionConnect->setText("Connect");
         this->enable_form(false);
-
-        this->cm->close();
     }
 }
 
@@ -304,176 +296,8 @@ void MainWindow::on_pushButton_reset_released()
 void MainWindow::on_actionClose_triggered()
 {
     if (cm->is_connected()) {
-        this->cm->close();
+        this->_info_received = false;
     }
-    this->close();
-}
-
-void MainWindow::on_comboBox_type_currentIndexChanged(int index)
-{
-    switch (index) {
-
-    case 0:
-        this->ui->spinBox_num->setEnabled(false);
-        this->ui->spinBox_val->setEnabled(false);
-        this->ui->spinBox_channel->setEnabled(false);
-        this->ui->spinBox_val_max->setEnabled(false);
-        this->ui->groupBox_midi_2->setEnabled(true);
-        this->ui->groupBox_midi_3->setEnabled(true);
-        this->ui->groupBox_midi_4->setEnabled(true);
-        this->ui->groupBox_midi_5->setEnabled(true);
-        break;
-    case 1:
-        this->ui->spinBox_num->setEnabled(true);
-        this->ui->spinBox_val->setEnabled(false);
-        this->ui->spinBox_channel->setEnabled(true);
-        this->ui->spinBox_val_max->setEnabled(false);
-        this->ui->groupBox_midi_2->setEnabled(true);
-        this->ui->groupBox_midi_3->setEnabled(true);
-        this->ui->groupBox_midi_4->setEnabled(true);
-        this->ui->groupBox_midi_5->setEnabled(true);
-        break;
-    case 3: case 4:
-        this->ui->spinBox_num->setEnabled(false);
-        this->ui->spinBox_val->setEnabled(false);
-        this->ui->spinBox_channel->setEnabled(true);
-        this->ui->spinBox_val_max->setEnabled(false);
-        this->ui->groupBox_midi_2->setEnabled(true);
-        this->ui->groupBox_midi_3->setEnabled(true);
-        this->ui->groupBox_midi_4->setEnabled(true);
-        this->ui->groupBox_midi_5->setEnabled(true);
-        break;
-    case 5: case 6:
-        this->ui->spinBox_num->setEnabled(true);
-        this->ui->spinBox_val->setEnabled(true);
-        this->ui->spinBox_channel->setEnabled(true);
-        this->ui->spinBox_val_max->setEnabled(true);
-        this->ui->groupBox_midi_2->setEnabled(false);
-        this->ui->groupBox_midi_3->setEnabled(false);
-        this->ui->groupBox_midi_4->setEnabled(false);
-        this->ui->groupBox_midi_5->setEnabled(false);
-
-        break;
-    default:
-        this->ui->spinBox_num->setEnabled(true);
-        this->ui->spinBox_val->setEnabled(true);
-        this->ui->spinBox_channel->setEnabled(true);
-        this->ui->groupBox_midi_2->setEnabled(true);
-        this->ui->groupBox_midi_3->setEnabled(true);
-        this->ui->groupBox_midi_4->setEnabled(true);
-        this->ui->groupBox_midi_5->setEnabled(true);
-    }
-}
-
-void MainWindow::on_comboBox_type_2_currentIndexChanged(int index)
-{
-    switch (index) {
-
-    case 0:
-        this->ui->spinBox_num_2->setEnabled(false);
-        this->ui->spinBox_val_2->setEnabled(false);
-        this->ui->spinBox_channel_2->setEnabled(false);
-        break;
-    case 1:
-        this->ui->spinBox_num_2->setEnabled(true);
-        this->ui->spinBox_val_2->setEnabled(false);
-        this->ui->spinBox_channel_2->setEnabled(true);
-        break;
-    case 3: case 4:
-        this->ui->spinBox_num_2->setEnabled(false);
-        this->ui->spinBox_val_2->setEnabled(false);
-        this->ui->spinBox_channel_2->setEnabled(true);
-        break;
-    default:
-        this->ui->spinBox_num_2->setEnabled(true);
-        this->ui->spinBox_val_2->setEnabled(true);
-        this->ui->spinBox_channel_2->setEnabled(true);
-    }
-}
-
-void MainWindow::on_comboBox_type_3_currentIndexChanged(int index)
-{
-    switch (index) {
-
-    case 0:
-        this->ui->spinBox_num_3->setEnabled(false);
-        this->ui->spinBox_val_3->setEnabled(false);
-        this->ui->spinBox_channel_3->setEnabled(false);
-        break;
-    case 1:
-        this->ui->spinBox_num_3->setEnabled(true);
-        this->ui->spinBox_val_3->setEnabled(false);
-        this->ui->spinBox_channel_3->setEnabled(true);
-        break;
-    case 3: case 4:
-        this->ui->spinBox_num_3->setEnabled(false);
-        this->ui->spinBox_val_3->setEnabled(false);
-        this->ui->spinBox_channel_3->setEnabled(true);
-        break;
-    default:
-        this->ui->spinBox_num_3->setEnabled(true);
-        this->ui->spinBox_val_3->setEnabled(true);
-        this->ui->spinBox_channel_3->setEnabled(true);
-    }
-}
-
-void MainWindow::on_comboBox_type_4_currentIndexChanged(int index)
-{
-    switch (index) {
-
-    case 0:
-        this->ui->spinBox_num_4->setEnabled(false);
-        this->ui->spinBox_val_4->setEnabled(false);
-        this->ui->spinBox_channel_4->setEnabled(false);
-        break;
-    case 1:
-        this->ui->spinBox_num_4->setEnabled(true);
-        this->ui->spinBox_val_4->setEnabled(false);
-        this->ui->spinBox_channel_4->setEnabled(true);
-        break;
-    case 3: case 4:
-        this->ui->spinBox_num_4->setEnabled(false);
-        this->ui->spinBox_val_4->setEnabled(false);
-        this->ui->spinBox_channel_4->setEnabled(true);
-        break;
-    default:
-        this->ui->spinBox_num_4->setEnabled(true);
-        this->ui->spinBox_val_4->setEnabled(true);
-        this->ui->spinBox_channel_4->setEnabled(true);
-    }
-}
-
-void MainWindow::on_comboBox_type_5_currentIndexChanged(int index)
-{
-    switch (index) {
-
-    case 0:
-        this->ui->spinBox_num_5->setEnabled(false);
-        this->ui->spinBox_val_5->setEnabled(false);
-        this->ui->spinBox_channel_5->setEnabled(false);
-        break;
-    case 1:
-        this->ui->spinBox_num_5->setEnabled(true);
-        this->ui->spinBox_val_5->setEnabled(false);
-        this->ui->spinBox_channel_5->setEnabled(true);
-        break;
-    case 3: case 4:
-        this->ui->spinBox_num_5->setEnabled(false);
-        this->ui->spinBox_val_5->setEnabled(false);
-        this->ui->spinBox_channel_5->setEnabled(true);
-        break;
-    default:
-        this->ui->spinBox_num_5->setEnabled(true);
-        this->ui->spinBox_val_5->setEnabled(true);
-        this->ui->spinBox_channel_5->setEnabled(true);
-    }
-}
-
-void MainWindow::write_to_console(QString text) {
-    this->ui->textBrowser_output->insertPlainText(QDateTime::currentDateTime().toString());
-    this->ui->textBrowser_output->insertPlainText(" : ");
-    this->ui->textBrowser_output->insertPlainText(text);
-    this->ui->textBrowser_output->insertPlainText("\n");
 }
 
 /*
@@ -499,4 +323,244 @@ void MainWindow::on_actionCheck_for_updates_triggered()
 void MainWindow::on_actionExpression_Input_triggered()
 {
 
+}
+
+void MainWindow::on_comboBox_type_currentIndexChanged(int index)
+{
+    this->ui->spinBox_channel->setValue(0);
+    this->ui->spinBox_num->setValue(0);
+    this->ui->spinBox_val->setValue(0);
+    this->ui->spinBox_val_max->setValue(0);
+
+    this->ui->spinBox_num->setEnabled(true);
+    this->ui->spinBox_val->setEnabled(true);
+    this->ui->spinBox_val_max->setEnabled(true);
+    this->ui->spinBox_channel->setEnabled(true);
+
+    // Enable forms
+    switch (index) {
+    case 0:
+        this->ui->spinBox_num->setEnabled(false);
+        this->ui->spinBox_val->setEnabled(false);
+        this->ui->spinBox_val_max->setEnabled(false);
+        this->ui->spinBox_channel->setEnabled(false);
+        break;
+    case 1:
+        this->ui->spinBox_val->setEnabled(false);
+        this->ui->spinBox_val_max->setEnabled(false);
+        break;
+    case 2:
+        this->ui->spinBox_val_max->setEnabled(false);
+        break;
+    case 9: case 10: case 11: case 12:
+        this->ui->spinBox_num->setEnabled(false);
+        this->ui->spinBox_val->setEnabled(false);
+        this->ui->spinBox_val_max->setEnabled(false);
+        break;
+    case 6: case 7:
+        this->ui->spinBox_val_max->setEnabled(false);
+    }
+
+    // Change Labels
+    this->ui->label_val->setText("Value 1");
+    this->ui->label_val_max->setText("Value 2");
+    this->ui->label_num->setText("Number 1");
+    switch (index) {
+    case 5:
+        this->ui->label_val->setText("Number 2");
+        this->ui->label_val_max->setText("Value 1");
+        break;
+    }
+}
+
+void MainWindow::on_comboBox_type_2_currentIndexChanged(int index)
+{
+    this->ui->spinBox_channel_2->setValue(0);
+    this->ui->spinBox_num_2->setValue(0);
+    this->ui->spinBox_val_2->setValue(0);
+    this->ui->spinBox_val_max_2->setValue(0);
+
+    this->ui->spinBox_num_2->setEnabled(true);
+    this->ui->spinBox_val_2->setEnabled(true);
+    this->ui->spinBox_val_max_2->setEnabled(true);
+    this->ui->spinBox_channel_2->setEnabled(true);
+
+    // Enable forms
+    switch (index) {
+    case 0:
+        this->ui->spinBox_num_2->setEnabled(false);
+        this->ui->spinBox_val_2->setEnabled(false);
+        this->ui->spinBox_val_max_2->setEnabled(false);
+        this->ui->spinBox_channel_2->setEnabled(false);
+        break;
+    case 1:
+        this->ui->spinBox_val_2->setEnabled(false);
+        this->ui->spinBox_val_max_2->setEnabled(false);
+        break;
+    case 2:
+        this->ui->spinBox_val_max_2->setEnabled(false);
+        break;
+    case 9: case 10: case 11: case 12:
+        this->ui->spinBox_num_2->setEnabled(false);
+        this->ui->spinBox_val_2->setEnabled(false);
+        this->ui->spinBox_val_max_2->setEnabled(false);
+        break;
+    case 6: case 7:
+        this->ui->spinBox_val_max_2->setEnabled(false);
+    }
+
+    // Change Labels
+    this->ui->label_val_2->setText("Value 1");
+    this->ui->label_val_max_2->setText("Value 2");
+    this->ui->label_num_2->setText("Number 1");
+    switch (index) {
+    case 5:
+        this->ui->label_val_2->setText("Number 2");
+        this->ui->label_val_max_2->setText("Value 1");
+        break;
+    }
+}
+
+void MainWindow::on_comboBox_type_3_currentIndexChanged(int index)
+{
+    this->ui->spinBox_channel_3->setValue(0);
+    this->ui->spinBox_num_3->setValue(0);
+    this->ui->spinBox_val_3->setValue(0);
+    this->ui->spinBox_val_max_3->setValue(0);
+
+    this->ui->spinBox_num_3->setEnabled(true);
+    this->ui->spinBox_val_3->setEnabled(true);
+    this->ui->spinBox_val_max_3->setEnabled(true);
+    this->ui->spinBox_channel_3->setEnabled(true);
+
+    // Enable forms
+    switch (index) {
+    case 0:
+        this->ui->spinBox_num_3->setEnabled(false);
+        this->ui->spinBox_val_3->setEnabled(false);
+        this->ui->spinBox_val_max_3->setEnabled(false);
+        this->ui->spinBox_channel_3->setEnabled(false);
+        break;
+    case 1:
+        this->ui->spinBox_val_3->setEnabled(false);
+        this->ui->spinBox_val_max_3->setEnabled(false);
+        break;
+    case 2:
+        this->ui->spinBox_val_max_3->setEnabled(false);
+        break;
+    case 9: case 10: case 11: case 12:
+        this->ui->spinBox_num_3->setEnabled(false);
+        this->ui->spinBox_val_3->setEnabled(false);
+        this->ui->spinBox_val_max_3->setEnabled(false);
+        break;
+    case 6: case 7:
+        this->ui->spinBox_val_max_3->setEnabled(false);
+    }
+
+    // Change Labels
+    this->ui->label_val_3->setText("Value 1");
+    this->ui->label_val_max_3->setText("Value 2");
+    this->ui->label_num_3->setText("Number 1");
+    switch (index) {
+    case 5:
+        this->ui->label_val_3->setText("Number 2");
+        this->ui->label_val_max_3->setText("Value 1");
+        break;
+    }
+}
+
+void MainWindow::on_comboBox_type_4_currentIndexChanged(int index)
+{
+    this->ui->spinBox_channel_4->setValue(0);
+    this->ui->spinBox_num_4->setValue(0);
+    this->ui->spinBox_val_4->setValue(0);
+    this->ui->spinBox_val_max_4->setValue(0);
+
+    this->ui->spinBox_num_4->setEnabled(true);
+    this->ui->spinBox_val_4->setEnabled(true);
+    this->ui->spinBox_val_max_4->setEnabled(true);
+    this->ui->spinBox_channel_4->setEnabled(true);
+
+    // Enable forms
+    switch (index) {
+    case 0:
+        this->ui->spinBox_num_4->setEnabled(false);
+        this->ui->spinBox_val_4->setEnabled(false);
+        this->ui->spinBox_val_max_4->setEnabled(false);
+        this->ui->spinBox_channel_4->setEnabled(false);
+        break;
+    case 1:
+        this->ui->spinBox_val_4->setEnabled(false);
+        this->ui->spinBox_val_max_4->setEnabled(false);
+        break;
+    case 2:
+        this->ui->spinBox_val_max_4->setEnabled(false);
+        break;
+    case 9: case 10: case 11: case 12:
+        this->ui->spinBox_num_4->setEnabled(false);
+        this->ui->spinBox_val_4->setEnabled(false);
+        this->ui->spinBox_val_max_4->setEnabled(false);
+        break;
+    case 6: case 7:
+        this->ui->spinBox_val_max_4->setEnabled(false);
+    }
+
+    // Change Labels
+    this->ui->label_val_4->setText("Value 1");
+    this->ui->label_val_max_4->setText("Value 2");
+    this->ui->label_num_4->setText("Number 1");
+    switch (index) {
+    case 5:
+        this->ui->label_val_4->setText("Number 2");
+        this->ui->label_val_max_4->setText("Value 1");
+        break;
+    }
+}
+
+void MainWindow::on_comboBox_type_5_currentIndexChanged(int index)
+{
+    this->ui->spinBox_channel_5->setValue(0);
+    this->ui->spinBox_num_5->setValue(0);
+    this->ui->spinBox_val_5->setValue(0);
+    this->ui->spinBox_val_max_5->setValue(0);
+
+    this->ui->spinBox_num_5->setEnabled(true);
+    this->ui->spinBox_val_5->setEnabled(true);
+    this->ui->spinBox_val_max_5->setEnabled(true);
+    this->ui->spinBox_channel_5->setEnabled(true);
+
+    // Enable forms
+    switch (index) {
+    case 0:
+        this->ui->spinBox_num_5->setEnabled(false);
+        this->ui->spinBox_val_5->setEnabled(false);
+        this->ui->spinBox_val_max_5->setEnabled(false);
+        this->ui->spinBox_channel_5->setEnabled(false);
+        break;
+    case 1:
+        this->ui->spinBox_val_5->setEnabled(false);
+        this->ui->spinBox_val_max_5->setEnabled(false);
+        break;
+    case 2:
+        this->ui->spinBox_val_max_5->setEnabled(false);
+        break;
+    case 9: case 10: case 11: case 12:
+        this->ui->spinBox_num_5->setEnabled(false);
+        this->ui->spinBox_val_5->setEnabled(false);
+        this->ui->spinBox_val_max_5->setEnabled(false);
+        break;
+    case 6: case 7:
+        this->ui->spinBox_val_max_5->setEnabled(false);
+    }
+
+    // Change Labels
+    this->ui->label_val_5->setText("Value 1");
+    this->ui->label_val_max_5->setText("Value 2");
+    this->ui->label_num_5->setText("Number 1");
+    switch (index) {
+    case 5:
+        this->ui->label_val_5->setText("Number 2");
+        this->ui->label_val_max_5->setText("Value 1");
+        break;
+    }
 }

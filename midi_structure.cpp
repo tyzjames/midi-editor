@@ -15,13 +15,13 @@ midi_structure::midi_structure(int inEEPROMaddress, QStringList list, int inPatc
 
     this->_mb1 = new midi_base(list.at(counter).toInt(), list.at(counter + 1).toInt(), list.at(counter + 2).toInt(), list.at(counter + 3).toInt(), list.at(counter + 4).toInt()); //0-4
     counter += 5;
-    this->_mb2 = new midi_base(list.at(counter).toInt(), list.at(counter + 1).toInt(), list.at(counter + 2).toInt(), list.at(counter + 4).toInt()); //5-9
+    this->_mb2 = new midi_base(list.at(counter).toInt(), list.at(counter + 1).toInt(), list.at(counter + 2).toInt(), list.at(counter + 3).toInt(), list.at(counter + 4).toInt()); //5-9
     counter += 5;
-    this->_mb3 = new midi_base(list.at(counter).toInt(), list.at(counter + 1).toInt(), list.at(counter + 2).toInt(), list.at(counter + 4).toInt()); //10-14
+    this->_mb3 = new midi_base(list.at(counter).toInt(), list.at(counter + 1).toInt(), list.at(counter + 2).toInt(), list.at(counter + 3).toInt(), list.at(counter + 4).toInt()); //10-14
     counter += 5;
-    this->_mb4 = new midi_base(list.at(counter).toInt(), list.at(counter + 1).toInt(), list.at(counter + 2).toInt(), list.at(counter + 4).toInt()); //15-19
+    this->_mb4 = new midi_base(list.at(counter).toInt(), list.at(counter + 1).toInt(), list.at(counter + 2).toInt(), list.at(counter + 3).toInt(), list.at(counter + 4).toInt()); //15-19
     counter += 5;
-    this->_mb5 = new midi_base(list.at(counter).toInt(), list.at(counter + 1).toInt(), list.at(counter + 2).toInt(), list.at(counter + 4).toInt()); //20-24
+    this->_mb5 = new midi_base(list.at(counter).toInt(), list.at(counter + 1).toInt(), list.at(counter + 2).toInt(), list.at(counter + 3).toInt(), list.at(counter + 4).toInt()); //20-24
     counter += 5;
 
     qDebug() << "counter: " << counter;
@@ -74,10 +74,11 @@ QString midi_structure::get_patch_name_short(){
 }
 
 void midi_structure::set_patch_name_short(QString inPatchNameShort){
-    if (inPatchNameShort.length() > this->_patch_name_size) { //Name can only be 4 characters long
+    if (inPatchNameShort.length() > this->_patch_name_size) {
         this->_patch_name_short = inPatchNameShort.mid(0,this->_patch_name_size);
     }
-    this->_patch_name_short = inPatchNameShort.trimmed();
+    //this->_patch_name_short = inPatchNameShort.trimmed();
+    this->_patch_name_short = inPatchNameShort;
 }
 
 /* Return patch name in 4 characters */
@@ -86,6 +87,15 @@ QString midi_structure::get_patch_name_short_4(){
     while (str.length() < this->_patch_name_size) {
         str.append(" ");
     }
-
     return str;
+}
+
+int midi_structure::get_checkSum_val() {
+    int checkSum_val = this->_mb1->get_checkSum_val() + this->_mb2->get_checkSum_val() + this->_mb3->get_checkSum_val()
+            + this->_mb4->get_checkSum_val() + this->_mb5->get_checkSum_val();
+    return checkSum_val;
+}
+
+int midi_structure::get_patch_name_size() {
+    return this->_patch_name_size;
 }
